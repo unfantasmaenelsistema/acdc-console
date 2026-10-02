@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACDC Console</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Themes ── */
+  :root[data-theme="dark"] {
+    --bg: #0d0d0d;
+    --surface: #141414;
+    --surface2: #1a1a1a;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --accent: #e05c2a;
+    --accent-glow: rgba(224,92,42,0.25);
+    --accent2: #f0a030;
+    --text: #e8e6e0;
+    --text2: #999;
+    --text3: #555;
+    --green: #4caf72;
+    --red: #e05050;
+    --blue: #4a9edd;
+    --yellow: #e0b040;
+    --sidebar-w: 210px;
+    --topbar-h: 52px;
+  }
+  :root[data-theme="light"] {
+    --bg: #f0ede8;
+    --surface: #ffffff;
+    --surface2: #f7f5f2;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --accent: #c94e20;
+    --accent-glow: rgba(201,78,32,0.15);
+    --accent2: #d08820;
+    --text: #1a1a1a;
+    --text2: #666;
+    --text3: #aaa;
+    --green: #2e7d4f;
+    --red: #c0392b;
+    --blue: #1a6fb0;
+    --yellow: #b07800;
+    --sidebar-w: 210px;
+    --topbar-h: 52px;
+  }
+
+  html, body { height: 100%; font-family: 'Barlow', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* ── Topbar ── */
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h);
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 18px; gap: 16px; z-index: 100;
+  }
+  .logo-area { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  #topbar-logo { height: 32px; width: 32px; object-fit: contain; }
+  .brand { font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 3px; line-height: 1; }
+  .brand .ac, .brand .dc { color: var(--text); }
+  .brand .bolt { color: var(--accent); }
+  .brand-sub { font-size: 8px; letter-spacing: 2.5px; color: var(--text2); text-transform: uppercase; margin-top: 1px; }
+  .topbar-mid { flex: 1; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .tb-btn {
+    background: transparent; border: 1px solid var(--border2);
+    color: var(--text2); font-family: 'Share Tech Mono', monospace;
+    font-size: 11px; letter-spacing: 1px; padding: 5px 11px; cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .tb-btn:hover { color: var(--text); border-color: var(--accent); }
+  .tb-link { color: var(--accent2); font-size: 11px; text-decoration: none; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px; }
+  .tb-link:hover { color: var(--accent); }
+  .hostname-badge { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--text3); letter-spacing: 1px; }
+
+  /* ── Layout ── */
+  #sidebar {
+    position: fixed; top: var(--topbar-h); left: 0; bottom: 0; width: var(--sidebar-w);
+    background: var(--surface); border-right: 1px solid var(--border);
+    overflow-y: auto; z-index: 90; padding-bottom: 20px;
+  }
+  #main { margin-top: var(--topbar-h); margin-left: var(--sidebar-w); padding: 24px; min-height: calc(100vh - var(--topbar-h)); }
+
+  /* ── Nav ── */
+  .nav-group { padding: 16px 14px 4px; }
+  .nav-group-label { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--text3); text-transform: uppercase; padding: 0 6px 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: 2px;
+    font-size: 13px; font-weight: 400; color: var(--text2);
+    cursor: pointer; transition: all 0.15s; margin-bottom: 1px;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-glow); }
+  .nav-icon { width: 14px; text-align: center; font-size: 13px; flex-shrink: 0; }
+
+  /* ── Pages ── */
+  .page { display: none; animation: fadeIn 0.2s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .page-header { margin-bottom: 20px; }
+  .page-title { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
+  .page-sub { font-size: 12px; color: var(--text2); margin-top: 2px; font-family: 'Share Tech Mono', monospace; }
+
+  /* ── Cards ── */
+  .card { background: var(--surface); border: 1px solid var(--border); padding: 18px; margin-bottom: 14px; }
+  .card-title { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--text2); text-transform: uppercase; margin-bottom: 12px; }
+
+  /* ── Stats Grid ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); padding: 16px; position: relative; overflow: hidden; }
+  .stat-label { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--text3); text-transform: uppercase; margin-bottom: 8px; }
+  .stat-val { font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-unit { font-size: 14px; color: var(--text2); font-weight: 400; }
+  .stat-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+  .stat-bar { height: 3px; background: var(--border); margin-top: 10px; }
+  .stat-bar-fill { height: 3px; transition: width 0.5s ease; }
+
+  /* ── Tables ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1.5px; color: var(--text3); text-transform: uppercase; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .data-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .data-table tr:last-child td { border-bottom: none; }
+
+  /* ── Badges ── */
+  .badge { font-family: 'Share Tech Mono', monospace; font-size: 10px; padding: 3px 8px; letter-spacing: 0.5px; display: inline-block; }
+  .badge-green { background: rgba(76,175,114,0.12); color: var(--green); border: 1px solid rgba(76,175,114,0.25); }
+  .badge-red { background: rgba(224,80,80,0.12); color: var(--red); border: 1px solid rgba(224,80,80,0.25); }
+  .badge-blue { background: rgba(74,158,221,0.12); color: var(--blue); border: 1px solid rgba(74,158,221,0.25); }
+  .badge-yellow { background: rgba(224,176,64,0.12); color: var(--yellow); border: 1px solid rgba(224,176,64,0.25); }
+  .badge-gray { background: rgba(128,128,128,0.1); color: var(--text2); border: 1px solid var(--border); }
+
+  /* ── Buttons ── */
+  .btn { font-family: 'Share Tech Mono', monospace; font-size: 11px; padding: 5px 12px; border: 1px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; letter-spacing: 0.5px; transition: all 0.15s; }
+  .btn:hover { color: var(--text); border-color: var(--accent); }
+  .btn-danger:hover { color: var(--red); border-color: var(--red); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn-primary:hover { background: #f06030; border-color: #f06030; color: #fff; }
+  .btn-sm { padding: 3px 8px; font-size: 10px; }
+
+  /* ── Form inputs ── */
+  .input-field {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    font-family: 'Share Tech Mono', monospace; font-size: 13px; padding: 8px 12px;
+    outline: none; transition: border-color 0.2s; width: 100%;
+  }
+  .input-field:focus { border-color: var(--accent); }
+  .input-field::placeholder { color: var(--text3); }
+  .input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .input-row .input-field { flex: 1; }
+
+  /* ── Log viewer ── */
+  #log-output {
+    background: var(--surface2); border: 1px solid var(--border);
+    font-family: 'Share Tech Mono', monospace; font-size: 12px; line-height: 1.6;
+    padding: 14px; height: 480px; overflow-y: auto; color: var(--text2);
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .log-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+
+  /* ── File browser ── */
+  .file-path-bar { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--accent2); padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .file-path-bar button { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 14px; padding: 0; }
+  .file-path-bar button:hover { color: var(--accent); }
+
+  /* ── Process table ── */
+  .proc-controls { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+  .proc-search { flex: 1; max-width: 300px; }
+
+  /* ── Network ── */
+  .net-card { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .net-field { margin-bottom: 8px; }
+  .net-label { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1.5px; color: var(--text3); text-transform: uppercase; margin-bottom: 2px; }
+  .net-value { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--text); }
+
+  /* ── Cron ── */
+  .cron-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .cron-badge { font-family: 'Share Tech Mono', monospace; font-size: 10px; padding: 2px 6px; background: rgba(74,158,221,0.1); color: var(--blue); border: 1px solid rgba(74,158,221,0.2); white-space: nowrap; }
+
+  /* ── Firewall ── */
+  .fw-status { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); margin-bottom: 14px; }
+  .fw-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Users ── */
+  .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-glow); border: 1px solid rgba(224,92,42,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+    font-family: 'Share Tech Mono', monospace; font-size: 12px;
+    padding: 10px 18px; border-left: 3px solid var(--green);
+    background: var(--surface); border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    color: var(--text); max-width: 360px; display: none;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  #toast.err { border-left-color: var(--red); }
+
+  /* ── Modal ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-top: 1px solid rgba(224,92,42,0.4); padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+  .modal-title { font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  #modal-file-content { font-family: 'Share Tech Mono', monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; color: var(--text2); line-height: 1.6; background: var(--surface2); padding: 12px; max-height: 400px; overflow-y: auto; border: 1px solid var(--border); }
+
+  /* ── Misc ── */
+  .section-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .loading { color: var(--text3); font-family: 'Share Tech Mono', monospace; font-size: 12px; padding: 20px; text-align: center; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2,1fr); } .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div id="topbar">
+  <div class="logo-area">
+    <img src="/static/logo.png" id="topbar-logo" onerror="this.style.display='none'" alt="logo">
+    <div>
+      <div class="brand"><span class="ac">AC</span><span class="bolt">⚡</span><span class="dc">DC</span></div>
+      <div class="brand-sub">Advanced Control &amp; Deployment Console</div>
+    </div>
+  </div>
+  <div class="topbar-mid">
+    <span class="hostname-badge" id="hostname-label"></span>
+  </div>
+  <div class="topbar-right">
+    <button class="tb-btn" onclick="toggleLang()" id="lang-btn">EN</button>
+    <button class="tb-btn" onclick="toggleTheme()" id="theme-btn">☀</button>
+    <a class="tb-link" href="{{ config.site_url }}" target="_blank">unfantasmaenelsistema.com</a>
+    <button class="tb-btn" onclick="logout()" style="color:var(--red)">logout</button>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div class="nav-group">
+    <div class="nav-group-label" data-i18n="nav_system">Sistema</div>
+    <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">◈</span><span data-i18n="nav_dashboard">Dashboard</span></div>
+    <div class="nav-item" onclick="showPage('processes')"><span class="nav-icon">⊡</span><span data-i18n="nav_processes">Procesos</span></div>
+    <div class="nav-item" onclick="showPage('logs')"><span class="nav-icon">≡</span><span data-i18n="nav_logs">Logs</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label" data-i18n="nav_services">Servicios</div>
+    <div class="nav-item" onclick="showPage('services')"><span class="nav-icon">▷</span><span data-i18n="nav_systemd">Systemd</span></div>
+    <div class="nav-item" onclick="showPage('firewall')"><span class="nav-icon">⊕</span><span data-i18n="nav_firewall">Firewall</span></div>
+    <div class="nav-item" onclick="showPage('cron')"><span class="nav-icon">◷</span><span data-i18n="nav_cron">Cron</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label" data-i18n="nav_manage">Gestión</div>
+    <div class="nav-item" onclick="showPage('users')"><span class="nav-icon">◎</span><span data-i18n="nav_users">Usuarios</span></div>
+    <div class="nav-item" onclick="showPage('files')"><span class="nav-icon">▦</span><span data-i18n="nav_files">Archivos</span></div>
+    <div class="nav-item" onclick="showPage('packages')"><span class="nav-icon">⊞</span><span data-i18n="nav_packages">Paquetes</span></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label" data-i18n="nav_network">Red</div>
+    <div class="nav-item" onclick="showPage('network')"><span class="nav-icon">⊗</span><span data-i18n="nav_network_item">Interfaces</span></div>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main">
+
+  <!-- ── Dashboard ── -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div class="page-title" data-i18n="dashboard_title">Dashboard</div>
+      <div class="page-sub" id="dashboard-sub">cargando...</div>
+    </div>
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-label" data-i18n="stat_cpu">CPU</div><div class="stat-val" id="s-cpu">—</div><div class="stat-sub" id="s-cpu-sub"></div><div class="stat-bar"><div class="stat-bar-fill" id="s-cpu-bar" style="background:var(--accent)"></div></div></div>
+      <div class="stat-card"><div class="stat-label" data-i18n="stat_ram">RAM</div><div class="stat-val" id="s-ram">—</div><div class="stat-sub" id="s-ram-sub"></div><div class="stat-bar"><div class="stat-bar-fill" id="s-ram-bar" style="background:var(--green)"></div></div></div>
+      <div class="stat-card"><div class="stat-label" data-i18n="stat_disk">Disco</div><div class="stat-val" id="s-disk">—</div><div class="stat-sub" id="s-disk-sub"></div><div class="stat-bar"><div class="stat-bar-fill" id="s-disk-bar" style="background:var(--blue)"></div></div></div>
+      <div class="stat-card"><div class="stat-label" data-i18n="stat_uptime">Uptime</div><div class="stat-val" id="s-uptime" style="font-size:18px;margin-top:4px">—</div><div class="stat-sub" id="s-uptime-sub"></div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title" data-i18n="card_sysinfo">Información del sistema</div>
+        <table class="data-table">
+          <tr><td style="color:var(--text3);width:120px" data-i18n="sysinfo_os">SO</td><td id="si-os">—</td></tr>
+          <tr><td style="color:var(--text3)" data-i18n="sysinfo_kernel">Kernel</td><td id="si-kernel">—</td></tr>
+          <tr><td style="color:var(--text3)" data-i18n="sysinfo_host">Hostname</td><td id="si-host">—</td></tr>
+          <tr><td style="color:var(--text3)">CPU</td><td id="si-cpu">—</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title" data-i18n="card_network_io">Red — I/O</div>
+        <table class="data-table">
+          <tr><td style="color:var(--text3);width:120px" data-i18n="net_sent">Enviado</td><td id="si-net-sent">—</td></tr>
+          <tr><td style="color:var(--text3)" data-i18n="net_recv">Recibido</td><td id="si-net-recv">—</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Processes ── -->
+  <div class="page" id="page-processes">
+    <div class="page-header">
+      <div class="page-title" data-i18n="nav_processes">Procesos</div>
+    </div>
+    <div class="proc-controls">
+      <input class="input-field proc-search" type="text" id="proc-filter" placeholder="Filtrar por nombre..." oninput="renderProcs()" data-i18n-placeholder="proc_filter_placeholder">
+      <button class="btn" onclick="loadProcesses()" data-i18n="btn_refresh">↻ Actualizar</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="data-table" id="proc-table">
+        <thead><tr>
+          <th>PID</th><th data-i18n="th_name">NOMBRE</th><th data-i18n="th_user">USUARIO</th>
+          <th>CPU%</th><th>MEM%</th><th data-i18n="th_status">ESTADO</th><th></th>
+        </tr></thead>
+        <tbody id="proc-body"><tr><td colspan="7" class="loading" data-i18n="loading">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Logs ── -->
+  <div class="page" id="page-logs">
+    <div class="page-header"><div class="page-title" data-i18n="nav_logs">Logs</div></div>
+    <div class="log-controls">
+      <select class="input-field" id="log-source" style="width:auto">
+        <option value="syslog">syslog</option>
+        <option value="kernel">kernel</option>
+        <option value="auth">auth/ssh</option>
+        <option value="nginx">nginx</option>
+        <option value="docker">docker</option>
+      </select>
+      <select class="input-field" id="log-lines" style="width:auto">
+        <option value="50">50 líneas</option>
+        <option value="100" selected>100 líneas</option>
+        <option value="200">200 líneas</option>
+        <option value="500">500 líneas</option>
+      </select>
+      <button class="btn btn-primary" onclick="loadLogs()" data-i18n="btn_load">Cargar</button>
+      <button class="btn" onclick="document.getElementById('log-output').scrollTop=99999" data-i18n="btn_scroll_bottom">↓ Final</button>
+    </div>
+    <div id="log-output"><span class="loading" data-i18n="loading">Cargando...</span></div>
+  </div>
+
+  <!-- ── Services ── -->
+  <div class="page" id="page-services">
+    <div class="page-header"><div class="page-title" data-i18n="nav_systemd">Servicios Systemd</div></div>
+    <div style="margin-bottom:10px">
+      <input class="input-field" type="text" id="svc-filter" placeholder="Filtrar servicios..." style="max-width:300px" oninput="renderServices()" data-i18n-placeholder="svc_filter_placeholder">
+      <button class="btn" onclick="loadServices()" style="margin-left:8px" data-i18n="btn_refresh">↻</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="data-table">
+        <thead><tr>
+          <th data-i18n="th_service">SERVICIO</th><th data-i18n="th_active">ACTIVO</th>
+          <th data-i18n="th_sub">SUB</th><th data-i18n="th_description">DESCRIPCIÓN</th><th></th>
+        </tr></thead>
+        <tbody id="svc-body"><tr><td colspan="5" class="loading">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Firewall ── -->
+  <div class="page" id="page-firewall">
+    <div class="page-header"><div class="page-title" data-i18n="nav_firewall">Firewall — UFW</div></div>
+    <div class="fw-status" id="fw-status-bar">
+      <div class="fw-dot" id="fw-dot"></div>
+      <span id="fw-status-text">—</span>
+      <div style="flex:1"></div>
+      <button class="btn btn-primary" id="fw-toggle-btn" onclick="firewallToggle()" data-i18n="btn_enable">Activar</button>
+    </div>
+    <div class="card">
+      <div class="card-title" data-i18n="fw_add_rule">Añadir regla</div>
+      <div class="input-row">
+        <input class="input-field" type="text" id="fw-port" placeholder="Puerto (ej: 80, 443, 22/tcp)" style="max-width:280px">
+        <button class="btn btn-primary" onclick="firewallAdd('allow')" data-i18n="btn_allow">ALLOW</button>
+        <button class="btn btn-danger" onclick="firewallAdd('deny')" data-i18n="btn_deny">DENY</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="data-table">
+        <thead><tr><th>#</th><th data-i18n="th_rule">REGLA</th><th></th></tr></thead>
+        <tbody id="fw-rules-body"><tr><td colspan="3" class="loading">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Cron ── -->
+  <div class="page" id="page-cron">
+    <div class="page-header"><div class="page-title" data-i18n="nav_cron">Tareas Cron</div></div>
+    <div class="card">
+      <div class="card-title" data-i18n="cron_new">Nueva tarea</div>
+      <div class="input-row">
+        <input class="input-field" type="text" id="cron-sched" placeholder="* * * * *" style="max-width:180px">
+        <input class="input-field" type="text" id="cron-cmd" placeholder="/usr/bin/mi-script.sh">
+        <button class="btn btn-primary" onclick="cronAdd()" data-i18n="btn_add">+ Añadir</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'Share Tech Mono',monospace">min hora día mes dia_semana</div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden" id="cron-list">
+      <div class="loading" data-i18n="loading">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- ── Users ── -->
+  <div class="page" id="page-users">
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="page-title" data-i18n="nav_users">Usuarios y grupos</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="openUserModal()">+ Nuevo usuario</button>
+        <button class="btn" onclick="openGroupModal()">+ Nuevo grupo</button>
+        <button class="btn" onclick="loadUsers()">↻</button>
+      </div>
+    </div>
+
+    <!-- Users table -->
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
+      <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span class="card-title" style="margin:0">Usuarios del sistema</span>
+        <input class="input-field" id="user-filter" type="text" placeholder="Filtrar..." style="max-width:200px;padding:4px 10px;font-size:12px" oninput="renderUsers()">
+        <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px;cursor:pointer">
+          <input type="checkbox" id="show-system-users" onchange="renderUsers()"> Sistema
+        </label>
+      </div>
+      <table class="data-table" id="users-table">
+        <thead><tr>
+          <th>USUARIO</th><th>UID</th><th>HOME</th><th>SHELL</th><th>GRUPOS</th><th>ESTADO</th><th style="min-width:200px">ACCIONES</th>
+        </tr></thead>
+        <tbody id="users-body"><tr><td colspan="7" class="loading">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Groups table -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:10px 16px;border-bottom:1px solid var(--border)">
+        <span class="card-title" style="margin:0">Grupos</span>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>GRUPO</th><th>GID</th><th>MIEMBROS</th><th></th></tr></thead>
+        <tbody id="groups-body"><tr><td colspan="4" class="loading">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Files ── -->
+  <div class="page" id="page-files">
+    <div class="page-header"><div class="page-title" data-i18n="nav_files">Gestor de archivos</div></div>
+    <div class="file-path-bar">
+      <button onclick="goUp()" title="Subir">↑</button>
+      <button onclick="loadFiles('/')">⌂</button>
+      <span id="current-path">/</span>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="data-table">
+        <thead><tr>
+          <th data-i18n="th_name">NOMBRE</th><th data-i18n="th_size">TAMAÑO</th>
+          <th data-i18n="th_modified">MODIFICADO</th><th data-i18n="th_perms">PERMISOS</th><th></th>
+        </tr></thead>
+        <tbody id="files-body"><tr><td colspan="5" class="loading">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Packages ── -->
+  <div class="page" id="page-packages">
+    <div class="page-header"><div class="page-title" data-i18n="nav_packages">Gestión de paquetes — APT</div></div>
+    <div class="card">
+      <div class="card-title" data-i18n="pkg_search_title">Buscar e instalar</div>
+      <div class="input-row">
+        <input class="input-field" type="text" id="pkg-search-input" placeholder="Nombre del paquete...">
+        <button class="btn btn-primary" onclick="searchPackages()" data-i18n="btn_search">Buscar</button>
+      </div>
+      <div id="pkg-search-results"></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span class="card-title" data-i18n="pkg_upgradable">Paquetes con actualización disponible</span>
+        <button class="btn btn-sm" onclick="loadUpgradable()" data-i18n="btn_refresh">↻</button>
+      </div>
+      <div id="pkg-upgradable-list" style="padding:12px">
+        <div class="loading" data-i18n="loading">Cargando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Network ── -->
+  <div class="page" id="page-network">
+    <div class="page-header"><div class="page-title" data-i18n="nav_network_item">Interfaces de red</div></div>
+    <div id="network-grid" class="two-col">
+      <div class="loading" data-i18n="loading">Cargando...</div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- File viewer modal -->
+<div class="modal-overlay" id="file-modal">
+  <div class="modal">
+    <div class="modal-title" id="file-modal-title">Archivo</div>
+    <div id="modal-file-content"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('file-modal').classList.remove('open')" data-i18n="btn_close">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo usuario -->
+<div class="modal-overlay" id="user-create-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">Crear nuevo usuario</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-family:'Share Tech Mono',monospace">USUARIO *</div>
+        <input class="input-field" type="text" id="new-username" placeholder="ej: juan">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-family:'Share Tech Mono',monospace">CONTRASEÑA *</div>
+        <input class="input-field" type="password" id="new-password" placeholder="••••••••">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-family:'Share Tech Mono',monospace">NOMBRE COMPLETO</div>
+        <input class="input-field" type="text" id="new-comment" placeholder="Juan García">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-family:'Share Tech Mono',monospace">SHELL</div>
+        <select class="input-field" id="new-shell">
+          <option value="/bin/bash">/bin/bash</option>
+          <option value="/bin/sh">/bin/sh</option>
+          <option value="/bin/zsh">/bin/zsh</option>
+          <option value="/sbin/nologin">/sbin/nologin</option>
+          <option value="/bin/false">/bin/false</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-family:'Share Tech Mono',monospace">HOME</div>
+      <input class="input-field" type="text" id="new-home" placeholder="/home/usuario (auto)">
+    </div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="new-create-home" checked>
+      <label for="new-create-home" style="font-size:13px;color:var(--text2)">Crear directorio home</label>
+    </div>
+    <div id="user-create-error" style="margin-top:10px;color:var(--red);font-size:12px;font-family:'Share Tech Mono',monospace;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('user-create-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="createUser()">Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nuevo grupo -->
+<div class="modal-overlay" id="group-create-modal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">Crear nuevo grupo</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-family:'Share Tech Mono',monospace">NOMBRE DEL GRUPO *</div>
+    <input class="input-field" type="text" id="new-group-name" placeholder="ej: developers">
+    <div id="group-create-error" style="margin-top:10px;color:var(--red);font-size:12px;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('group-create-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="createGroup()">Crear grupo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Cambiar contraseña -->
+<div class="modal-overlay" id="passwd-modal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">Cambiar contraseña — <span id="passwd-modal-user" style="color:var(--accent)"></span></div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-family:'Share Tech Mono',monospace">NUEVA CONTRASEÑA</div>
+    <input class="input-field" type="password" id="passwd-new" placeholder="••••••••">
+    <div style="font-size:11px;color:var(--text2);margin:10px 0 4px;font-family:'Share Tech Mono',monospace">CONFIRMAR</div>
+    <input class="input-field" type="password" id="passwd-confirm" placeholder="••••••••">
+    <div id="passwd-error" style="margin-top:10px;color:var(--red);font-size:12px;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('passwd-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="changePasswd()">Cambiar contraseña</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Editar grupos de usuario -->
+<div class="modal-overlay" id="usergroups-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">Grupos de <span id="usergroups-modal-user" style="color:var(--accent)"></span></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Marca los grupos a los que pertenece el usuario. El primero marcado será el grupo principal.</div>
+    <div id="usergroups-checklist" style="max-height:300px;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:4px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('usergroups-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveUserGroups()">Guardar grupos</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── i18n ──────────────────────────────────────────────────────────────────────
+const LANG = {
+  es: {
+    nav_system:"Sistema", nav_dashboard:"Dashboard", nav_processes:"Procesos",
+    nav_logs:"Logs", nav_services:"Servicios", nav_systemd:"Systemd",
+    nav_firewall:"Firewall", nav_cron:"Cron", nav_manage:"Gestión",
+    nav_users:"Usuarios", nav_files:"Archivos", nav_packages:"Paquetes",
+    nav_network:"Red", nav_network_item:"Interfaces",
+    dashboard_title:"Dashboard", stat_cpu:"CPU", stat_ram:"RAM",
+    stat_disk:"Disco", stat_uptime:"Uptime", card_sysinfo:"Información del sistema",
+    card_network_io:"Red — I/O", sysinfo_os:"SO", sysinfo_kernel:"Kernel",
+    sysinfo_host:"Hostname", net_sent:"Enviado", net_recv:"Recibido",
+    btn_refresh:"↻ Actualizar", btn_load:"Cargar", btn_scroll_bottom:"↓ Final",
+    btn_allow:"ALLOW", btn_deny:"DENY", btn_add:"+ Añadir", btn_close:"Cerrar",
+    btn_enable:"Activar", btn_disable:"Desactivar", btn_search:"Buscar",
+    th_name:"NOMBRE", th_user:"USUARIO", th_status:"ESTADO", th_service:"SERVICIO",
+    th_active:"ACTIVO", th_sub:"SUB", th_description:"DESCRIPCIÓN",
+    th_rule:"REGLA", th_size:"TAMAÑO", th_modified:"MODIFICADO", th_perms:"PERMISOS",
+    loading:"Cargando...", fw_add_rule:"Añadir regla", cron_new:"Nueva tarea",
+    users_title:"Usuarios del sistema", groups_title:"Grupos",
+    pkg_search_title:"Buscar e instalar", pkg_upgradable:"Paquetes con actualización disponible",
+    proc_filter_placeholder:"Filtrar por nombre...", svc_filter_placeholder:"Filtrar servicios...",
+    fw_active:"Firewall activo", fw_inactive:"Firewall inactivo",
+    confirm_kill:"¿Terminar proceso PID", confirm_delete:"¿Eliminar",
+    action_install:"instalar", action_remove:"eliminar",
+  },
+  en: {
+    nav_system:"System", nav_dashboard:"Dashboard", nav_processes:"Processes",
+    nav_logs:"Logs", nav_services:"Services", nav_systemd:"Systemd",
+    nav_firewall:"Firewall", nav_cron:"Cron", nav_manage:"Management",
+    nav_users:"Users", nav_files:"Files", nav_packages:"Packages",
+    nav_network:"Network", nav_network_item:"Interfaces",
+    dashboard_title:"Dashboard", stat_cpu:"CPU", stat_ram:"RAM",
+    stat_disk:"Disk", stat_uptime:"Uptime", card_sysinfo:"System information",
+    card_network_io:"Network — I/O", sysinfo_os:"OS", sysinfo_kernel:"Kernel",
+    sysinfo_host:"Hostname", net_sent:"Sent", net_recv:"Received",
+    btn_refresh:"↻ Refresh", btn_load:"Load", btn_scroll_bottom:"↓ Bottom",
+    btn_allow:"ALLOW", btn_deny:"DENY", btn_add:"+ Add", btn_close:"Close",
+    btn_enable:"Enable", btn_disable:"Disable", btn_search:"Search",
+    th_name:"NAME", th_user:"USER", th_status:"STATUS", th_service:"SERVICE",
+    th_active:"ACTIVE", th_sub:"SUB", th_description:"DESCRIPTION",
+    th_rule:"RULE", th_size:"SIZE", th_modified:"MODIFIED", th_perms:"PERMS",
+    loading:"Loading...", fw_add_rule:"Add rule", cron_new:"New task",
+    users_title:"System users", groups_title:"Groups",
+    pkg_search_title:"Search & install", pkg_upgradable:"Packages with available updates",
+    proc_filter_placeholder:"Filter by name...", svc_filter_placeholder:"Filter services...",
+    fw_active:"Firewall active", fw_inactive:"Firewall inactive",
+    confirm_kill:"Kill process PID", confirm_delete:"Delete",
+    action_install:"install", action_remove:"remove",
+  }
+};
+let currentLang = localStorage.getItem('acdc-lang') || 'es';
+function t(k) { return (LANG[currentLang] || LANG.es)[k] || k; }
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.dataset.i18n;
+    el.textContent = t(k);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  document.getElementById('lang-btn').textContent = currentLang === 'es' ? 'EN' : 'ES';
+}
+function toggleLang() {
+  currentLang = currentLang === 'es' ? 'en' : 'es';
+  localStorage.setItem('acdc-lang', currentLang);
+  applyLang();
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+let currentTheme = localStorage.getItem('acdc-theme') || 'dark';
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  document.getElementById('theme-btn').textContent = currentTheme === 'dark' ? '☀' : '☽';
+}
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('acdc-theme', currentTheme);
+  applyTheme();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, isErr=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = isErr ? 'err' : '';
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+let currentPage = 'dashboard';
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + name + "'")) n.classList.add('active');
+  });
+  currentPage = name;
+  const loaders = {
+    dashboard: loadDashboard, processes: loadProcesses,
+    logs: loadLogs, services: loadServices,
+    firewall: loadFirewall, cron: loadCron,
+    users: loadUsers, files: () => loadFiles('/'),
+    packages: loadUpgradable, network: loadNetwork
+  };
+  if (loaders[name]) loaders[name]();
+}
+
+// ── Util ──────────────────────────────────────────────────────────────────────
+function fmtBytes(b) {
+  if (b > 1e9) return (b/1e9).toFixed(1) + ' GB';
+  if (b > 1e6) return (b/1e6).toFixed(1) + ' MB';
+  if (b > 1e3) return (b/1e3).toFixed(1) + ' KB';
+  return b + ' B';
+}
+async function api(url, opts={}) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) { window.location.href = '/login'; return null; }
+  return r.json();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+let dashTimer;
+async function loadDashboard() {
+  clearInterval(dashTimer);
+  const data = await api('/api/dashboard');
+  if (!data) return;
+  document.getElementById('s-cpu').innerHTML = data.cpu.percent + '<span class="stat-unit">%</span>';
+  document.getElementById('s-cpu-sub').textContent = `${data.cpu.cores} cores · ${data.cpu.freq} GHz`;
+  document.getElementById('s-cpu-bar').style.width = data.cpu.percent + '%';
+  document.getElementById('s-ram').innerHTML = data.memory.used_gb + '<span class="stat-unit"> GB</span>';
+  document.getElementById('s-ram-sub').textContent = `de ${data.memory.total_gb} GB`;
+  document.getElementById('s-ram-bar').style.width = data.memory.percent + '%';
+  document.getElementById('s-disk').innerHTML = data.disk.used_gb + '<span class="stat-unit"> GB</span>';
+  document.getElementById('s-disk-sub').textContent = `de ${data.disk.total_gb} GB`;
+  document.getElementById('s-disk-bar').style.width = data.disk.percent + '%';
+  document.getElementById('s-uptime').textContent = data.uptime;
+  document.getElementById('s-uptime-sub').textContent = data.os;
+  document.getElementById('si-os').textContent = data.os;
+  document.getElementById('si-kernel').textContent = data.kernel;
+  document.getElementById('si-host').textContent = data.hostname;
+  document.getElementById('si-cpu').textContent = `${data.cpu.cores} cores · ${data.cpu.freq} GHz`;
+  document.getElementById('si-net-sent').textContent = fmtBytes(data.network.bytes_sent);
+  document.getElementById('si-net-recv').textContent = fmtBytes(data.network.bytes_recv);
+  document.getElementById('dashboard-sub').textContent = data.hostname + ' · ' + data.os;
+  document.getElementById('hostname-label').textContent = data.hostname;
+  dashTimer = setInterval(loadDashboard, 5000);
+}
+
+// ── Processes ─────────────────────────────────────────────────────────────────
+let allProcs = [];
+async function loadProcesses() {
+  allProcs = await api('/api/processes') || [];
+  renderProcs();
+}
+function renderProcs() {
+  const filter = document.getElementById('proc-filter').value.toLowerCase();
+  const procs = filter ? allProcs.filter(p => p.name.toLowerCase().includes(filter) || String(p.pid).includes(filter) || p.user.toLowerCase().includes(filter)) : allProcs;
+  const tbody = document.getElementById('proc-body');
+  if (!procs.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading">Sin resultados</td></tr>'; return; }
+  tbody.innerHTML = procs.slice(0, 100).map(p => `
+    <tr>
+      <td style="font-family:'Share Tech Mono',monospace;color:var(--text3)">${p.pid}</td>
+      <td style="font-weight:500">${p.name}</td>
+      <td style="color:var(--text2);font-size:12px">${p.user}</td>
+      <td style="color:${p.cpu>50?'var(--accent)':p.cpu>20?'var(--yellow)':'var(--text)'}">${p.cpu}%</td>
+      <td>${p.mem.toFixed(1)}%</td>
+      <td><span class="badge ${p.status==='running'?'badge-green':'badge-gray'}">${p.status}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm btn-danger" onclick="killProc(${p.pid},'${p.name.replace(/'/g,"\\'")}',false)" title="SIGTERM — terminar">✕</button>
+        <button class="btn btn-sm btn-danger" onclick="killProc(${p.pid},'${p.name.replace(/'/g,"\\'")}',true)" title="SIGKILL — forzar" style="opacity:0.7">⚡</button>
+      </td>
+    </tr>`).join('');
+}
+async function killProc(pid, name, force) {
+  const verb = force ? 'FORZAR (SIGKILL)' : 'terminar (SIGTERM)';
+  if (!confirm(`¿${verb} el proceso PID ${pid} (${name})?`)) return;
+  const r = await api(`/api/processes/${pid}/kill`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({force})
+  });
+  if (r && r.ok) {
+    toast(`PID ${pid} (${r.name || name}) terminado`);
+    setTimeout(loadProcesses, 800);
+  } else {
+    toast(r?.error || `Error al terminar PID ${pid}`, true);
+  }
+}
+
+// ── Logs ──────────────────────────────────────────────────────────────────────
+async function loadLogs() {
+  const src = document.getElementById('log-source').value;
+  const lines = document.getElementById('log-lines').value;
+  document.getElementById('log-output').textContent = t('loading');
+  const data = await api(`/api/logs?source=${src}&lines=${lines}`);
+  if (!data) return;
+  const out = document.getElementById('log-output');
+  out.textContent = data.lines.join('\n');
+  out.scrollTop = out.scrollHeight;
+}
+
+// ── Services ──────────────────────────────────────────────────────────────────
+let allServices = [];
+async function loadServices() {
+  allServices = await api('/api/services') || [];
+  renderServices();
+}
+function renderServices() {
+  const f = document.getElementById('svc-filter').value.toLowerCase();
+  const svcs = f ? allServices.filter(s => s.name.toLowerCase().includes(f)) : allServices;
+  const tbody = document.getElementById('svc-body');
+  tbody.innerHTML = svcs.map(s => `
+    <tr>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:12px">${s.name}</td>
+      <td><span class="badge ${s.active==='active'?'badge-green':'badge-red'}">${s.active}</span></td>
+      <td><span class="badge badge-gray">${s.sub}</span></td>
+      <td style="color:var(--text2);font-size:12px">${s.description}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm" onclick="svcAction('${s.name}','restart')" title="restart">↻</button>
+        ${s.active==='active'
+          ? `<button class="btn btn-sm btn-danger" onclick="svcAction('${s.name}','stop')">■</button>`
+          : `<button class="btn btn-sm" onclick="svcAction('${s.name}','start')">▷</button>`
+        }
+      </td>
+    </tr>`).join('');
+}
+async function svcAction(name, action) {
+  const r = await api(`/api/services/${encodeURIComponent(name)}/${action}`, {method:'POST'});
+  if (r) { toast(`${name}: ${action} OK`); setTimeout(loadServices, 1000); }
+}
+
+// ── Firewall ──────────────────────────────────────────────────────────────────
+let fwEnabled = false;
+async function loadFirewall() {
+  const data = await api('/api/firewall/status');
+  if (!data) return;
+  fwEnabled = data.enabled;
+  const dot = document.getElementById('fw-dot');
+  dot.style.background = fwEnabled ? 'var(--green)' : 'var(--red)';
+  document.getElementById('fw-status-text').textContent = fwEnabled ? t('fw_active') : t('fw_inactive');
+  const toggleBtn = document.getElementById('fw-toggle-btn');
+  toggleBtn.textContent = fwEnabled ? t('btn_disable') : t('btn_enable');
+  toggleBtn.className = fwEnabled ? 'btn btn-danger' : 'btn btn-primary';
+  const tbody = document.getElementById('fw-rules-body');
+  if (!data.rules.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="loading">Sin reglas definidas</td></tr>';
+  } else {
+    tbody.innerHTML = data.rules.map((r,i) => `
+      <tr>
+        <td style="color:var(--text3);font-family:'Share Tech Mono',monospace;width:40px">${i+1}</td>
+        <td style="font-family:'Share Tech Mono',monospace;font-size:12px">${r}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="firewallDelete(${i+1})">✕</button></td>
+      </tr>`).join('');
+  }
+}
+async function firewallToggle() {
+  const action = fwEnabled ? 'disable' : 'enable';
+  const btn = document.getElementById('fw-toggle-btn');
+  btn.textContent = '...';
+  btn.disabled = true;
+  const r = await api(`/api/firewall/${action}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+  btn.disabled = false;
+  if (r && r.ok) {
+    toast(`Firewall ${action === 'enable' ? 'activado' : 'desactivado'}`);
+  } else {
+    toast(r?.output || r?.error || `Error al ${action} firewall`, true);
+  }
+  await loadFirewall();
+}
+async function firewallAdd(type) {
+  const port = document.getElementById('fw-port').value.trim();
+  if (!port) return toast('Escribe un puerto primero', true);
+  const r = await api(`/api/firewall/${type}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({port})});
+  if (r && r.ok) {
+    document.getElementById('fw-port').value = '';
+    toast(`Regla ${type.toUpperCase()} ${port} añadida`);
+    loadFirewall();
+  } else {
+    toast(r?.output || r?.error || 'Error añadiendo regla', true);
+  }
+}
+async function firewallDelete(n) {
+  if (!confirm(`¿Eliminar regla #${n}?`)) return;
+  const r = await api('/api/firewall/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rule_number:String(n)})});
+  if (r && r.ok) { toast(`Regla #${n} eliminada`); loadFirewall(); }
+  else toast(r?.output || 'Error eliminando regla', true);
+}
+
+// ── Cron ──────────────────────────────────────────────────────────────────────
+async function loadCron() {
+  const data = await api('/api/cron') || [];
+  const el = document.getElementById('cron-list');
+  if (!data.length) {
+    el.innerHTML = '<div class="loading">Sin tareas programadas</div>';
+    return;
+  }
+  el.innerHTML = '<table class="data-table"><thead><tr><th>SCHEDULE</th><th>COMANDO</th><th></th></tr></thead><tbody>' +
+    data.map(j => `<tr>
+      <td><span class="cron-badge">${j.schedule}</span></td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:12px">${j.command}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="cronDelete('${j.raw.replace(/'/g,"\\'")}')">✕</button></td>
+    </tr>`).join('') + '</tbody></table>';
+}
+async function cronAdd() {
+  const s = document.getElementById('cron-sched').value.trim();
+  const c = document.getElementById('cron-cmd').value.trim();
+  if (!s || !c) return toast('Rellena horario y comando', true);
+  const r = await api('/api/cron', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({entry:`${s} ${c}`})});
+  if (r && r.ok) { document.getElementById('cron-sched').value=''; document.getElementById('cron-cmd').value=''; loadCron(); toast('Tarea añadida'); }
+}
+async function cronDelete(raw) {
+  await api('/api/cron/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({raw})});
+  loadCron();
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+let allUsers = [], allGroups = [], editingUser = null;
+
+async function loadUsers() {
+  const [users, groups] = await Promise.all([api('/api/users'), api('/api/groups')]);
+  allUsers  = users  || [];
+  allGroups = groups || [];
+  renderUsers();
+  renderGroups();
+}
+
+function renderUsers() {
+  const filter = (document.getElementById('user-filter')?.value || '').toLowerCase();
+  const showSys = document.getElementById('show-system-users')?.checked;
+  let list = allUsers;
+  if (!showSys) list = list.filter(u => u.uid >= 1000 || u.uid === 0);
+  if (filter) list = list.filter(u => u.name.toLowerCase().includes(filter) || (u.comment||'').toLowerCase().includes(filter));
+  list = list.sort((a,b) => a.uid - b.uid);
+
+  const tbody = document.getElementById('users-body');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading">Sin usuarios</td></tr>'; return; }
+
+  tbody.innerHTML = list.map(u => {
+    const initials = u.name.slice(0,2).toUpperCase();
+    const isRoot = u.uid === 0;
+    const isSystem = u.uid > 0 && u.uid < 1000;
+    const avatarColor = isRoot ? 'background:rgba(224,80,80,0.15);color:var(--red);border-color:rgba(224,80,80,0.3)'
+                      : isSystem ? 'background:rgba(128,128,128,0.1);color:var(--text3);border-color:var(--border)'
+                      : 'background:var(--accent-glow);color:var(--accent);border-color:rgba(224,92,42,0.3)';
+    const groups = (u.groups||[]).slice(0,4).join(', ') + (u.groups?.length > 4 ? '…' : '');
+    return `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="user-avatar" style="${avatarColor}">${initials}</div>
+          <div>
+            <div style="font-weight:500">${u.name}</div>
+            ${u.comment ? `<div style="font-size:11px;color:var(--text2)">${u.comment}</div>` : ''}
+          </div>
+        </div>
+      </td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3)">${u.uid}</td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2)">${u.home}</td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px">${u.shell}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${groups}</td>
+      <td>
+        ${u.locked
+          ? '<span class="badge badge-red">bloqueado</span>'
+          : '<span class="badge badge-green">activo</span>'}
+      </td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm" onclick="openPasswdModal('${u.name}')" title="Cambiar contraseña">🔑</button>
+        <button class="btn btn-sm" onclick="openUserGroupsModal('${u.name}')" title="Editar grupos">👥</button>
+        <button class="btn btn-sm" onclick="changeShell('${u.name}')" title="Cambiar shell">$</button>
+        ${u.locked
+          ? `<button class="btn btn-sm" onclick="lockUser('${u.name}',false)" title="Desbloquear">🔓</button>`
+          : `<button class="btn btn-sm btn-danger" onclick="lockUser('${u.name}',true)" title="Bloquear">🔒</button>`}
+        ${u.uid >= 1000
+          ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${u.name}')" title="Eliminar">✕</button>`
+          : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderGroups() {
+  const tbody = document.getElementById('groups-body');
+  tbody.innerHTML = allGroups.sort((a,b)=>a.gid-b.gid).map(g => `
+    <tr>
+      <td style="font-weight:500">${g.name}</td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3)">${g.gid}</td>
+      <td style="font-size:12px;color:var(--text2)">${g.members.join(', ') || '—'}</td>
+      <td>
+        ${g.gid >= 1000
+          ? `<button class="btn btn-sm btn-danger" onclick="deleteGroup('${g.name}')">✕</button>`
+          : ''}
+      </td>
+    </tr>`).join('');
+}
+
+// Modals
+function openUserModal() {
+  ['new-username','new-password','new-comment','new-home'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('new-shell').value='/bin/bash';
+  document.getElementById('new-create-home').checked=true;
+  document.getElementById('user-create-error').style.display='none';
+  document.getElementById('user-create-modal').classList.add('open');
+}
+function openGroupModal() {
+  document.getElementById('new-group-name').value='';
+  document.getElementById('group-create-error').style.display='none';
+  document.getElementById('group-create-modal').classList.add('open');
+}
+function openPasswdModal(username) {
+  editingUser = username;
+  document.getElementById('passwd-modal-user').textContent = username;
+  document.getElementById('passwd-new').value='';
+  document.getElementById('passwd-confirm').value='';
+  document.getElementById('passwd-error').style.display='none';
+  document.getElementById('passwd-modal').classList.add('open');
+}
+function openUserGroupsModal(username) {
+  editingUser = username;
+  document.getElementById('usergroups-modal-user').textContent = username;
+  const user = allUsers.find(u=>u.name===username);
+  const userGroups = user?.groups || [];
+  const list = document.getElementById('usergroups-checklist');
+  list.innerHTML = allGroups.sort((a,b)=>a.name.localeCompare(b.name)).map(g => `
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:4px 8px;cursor:pointer;border:1px solid ${userGroups.includes(g.name)?'var(--accent)':'var(--border)'};border-radius:2px">
+      <input type="checkbox" value="${g.name}" ${userGroups.includes(g.name)?'checked':''} onchange="this.closest('label').style.borderColor=this.checked?'var(--accent)':'var(--border)'">
+      <span style="flex:1">${g.name}</span>
+      <span style="font-size:10px;color:var(--text3);font-family:'Share Tech Mono',monospace">${g.gid}</span>
+    </label>`).join('');
+  document.getElementById('usergroups-modal').classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Actions
+async function createUser() {
+  const username = document.getElementById('new-username').value.trim();
+  const password = document.getElementById('new-password').value;
+  const comment  = document.getElementById('new-comment').value.trim();
+  const shell    = document.getElementById('new-shell').value;
+  const home     = document.getElementById('new-home').value.trim();
+  const createHome = document.getElementById('new-create-home').checked;
+  const errEl = document.getElementById('user-create-error');
+  errEl.style.display='none';
+  const r = await api('/api/users/create', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({username, password, comment, shell, home: home||undefined, create_home: createHome})});
+  if (r && r.ok) {
+    closeModal('user-create-modal');
+    toast(`Usuario ${username} creado`);
+    loadUsers();
+  } else {
+    errEl.textContent = r?.error || 'Error al crear usuario';
+    errEl.style.display = 'block';
+  }
+}
+
+async function createGroup() {
+  const name = document.getElementById('new-group-name').value.trim();
+  const errEl = document.getElementById('group-create-error');
+  errEl.style.display='none';
+  const r = await api('/api/groups/create', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})});
+  if (r && r.ok) {
+    closeModal('group-create-modal');
+    toast(`Grupo ${name} creado`);
+    loadUsers();
+  } else {
+    errEl.textContent = r?.error || 'Error al crear grupo';
+    errEl.style.display='block';
+  }
+}
+
+async function changePasswd() {
+  const p1 = document.getElementById('passwd-new').value;
+  const p2 = document.getElementById('passwd-confirm').value;
+  const errEl = document.getElementById('passwd-error');
+  errEl.style.display='none';
+  if (p1 !== p2) { errEl.textContent='Las contraseñas no coinciden'; errEl.style.display='block'; return; }
+  if (p1.length < 4) { errEl.textContent='Mínimo 4 caracteres'; errEl.style.display='block'; return; }
+  const r = await api(`/api/users/${editingUser}/passwd`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:p1})});
+  if (r && r.ok) { closeModal('passwd-modal'); toast(`Contraseña de ${editingUser} actualizada`); }
+  else { errEl.textContent = r?.error || 'Error'; errEl.style.display='block'; }
+}
+
+async function saveUserGroups() {
+  const checked = [...document.querySelectorAll('#usergroups-checklist input:checked')].map(i=>i.value);
+  if (!checked.length) { toast('Selecciona al menos un grupo', true); return; }
+  const r = await api(`/api/users/${editingUser}/groups`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({groups:checked})});
+  if (r && r.ok) { closeModal('usergroups-modal'); toast(`Grupos de ${editingUser} actualizados`); loadUsers(); }
+  else toast(r?.error || 'Error al actualizar grupos', true);
+}
+
+async function lockUser(username, lock) {
+  const action = lock ? 'lock' : 'unlock';
+  const r = await api(`/api/users/${username}/${action}`, {method:'POST'});
+  if (r && r.ok) { toast(`${username}: ${lock?'bloqueado':'desbloqueado'}`); loadUsers(); }
+  else toast(r?.output || 'Error', true);
+}
+
+async function deleteUser(username) {
+  const removeHome = confirm(`¿Eliminar también el directorio home de ${username}?`);
+  if (!confirm(`¿CONFIRMAS que quieres eliminar el usuario ${username}?`)) return;
+  const r = await api(`/api/users/${username}/delete`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({remove_home:removeHome})});
+  if (r && r.ok) { toast(`Usuario ${username} eliminado`); loadUsers(); }
+  else toast(r?.output || 'Error al eliminar', true);
+}
+
+async function deleteGroup(name) {
+  if (!confirm(`¿Eliminar el grupo ${name}?`)) return;
+  const r = await api('/api/groups/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})});
+  if (r && r.ok) { toast(`Grupo ${name} eliminado`); loadUsers(); }
+  else toast(r?.output || r?.error || 'Error al eliminar grupo', true);
+}
+
+async function logout() {
+  await fetch('/api/logout', {method:'POST'});
+  window.location.href = '/login';
+}
+
+async function changeShell(username) {
+  const shells = ['/bin/bash','/bin/sh','/bin/zsh','/sbin/nologin','/bin/false'];
+  const user = allUsers.find(u=>u.name===username);
+  const current = user?.shell || '/bin/bash';
+  const chosen = prompt(`Shell para ${username}:\n${shells.map((s,i)=>`${i+1}. ${s}`).join('\n')}\n\nEscribe el número o la ruta:`, current);
+  if (!chosen) return;
+  const shell = isNaN(chosen) ? chosen.trim() : (shells[parseInt(chosen)-1] || current);
+  const r = await api(`/api/users/${username}/shell`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({shell})});
+  if (r && r.ok) { toast(`Shell de ${username} → ${shell}`); loadUsers(); }
+  else toast(r?.error || r?.output || 'Error', true);
+}
+
+
+// ── Files ─────────────────────────────────────────────────────────────────────
+let currentFilePath = '/';
+async function loadFiles(path) {
+  currentFilePath = path;
+  document.getElementById('current-path').textContent = path;
+  const data = await api(`/api/files?path=${encodeURIComponent(path)}`);
+  if (!data || data.error) { toast(data?.error || 'Error', true); return; }
+  const tbody = document.getElementById('files-body');
+  tbody.innerHTML = data.items.map(item => `
+    <tr>
+      <td>
+        <span style="margin-right:6px">${item.type==='dir'?'📁':'📄'}</span>
+        <span style="cursor:${item.type==='dir'?'pointer':'default'};${item.type==='dir'?'color:var(--accent2)':''}"
+          onclick="${item.type==='dir'?`loadFiles('${(path+'/'+item.name).replace('//','/').replace(/'/g,"\\'")}')`:
+            `viewFile('${(path+'/'+item.name).replace('//','/').replace(/'/g,"\\'")}','${item.name.replace(/'/g,"\\'")}')` }">${item.name}</span>
+      </td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2)">${fmtBytes(item.size)}</td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2)">${item.modified}</td>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3)">${item.permissions}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteFile('${(path+'/'+item.name).replace('//','/').replace(/'/g,"\\'")}','${item.name.replace(/'/g,"\\'")}')">✕</button></td>
+    </tr>`).join('');
+}
+function goUp() {
+  if (currentFilePath === '/') return;
+  const parent = currentFilePath.split('/').slice(0, -1).join('/') || '/';
+  loadFiles(parent);
+}
+async function viewFile(path, name) {
+  const data = await api(`/api/files/read?path=${encodeURIComponent(path)}`);
+  if (!data || data.error) { toast(data?.error || 'Error', true); return; }
+  document.getElementById('file-modal-title').textContent = name;
+  document.getElementById('modal-file-content').textContent = data.content;
+  document.getElementById('file-modal').classList.add('open');
+}
+async function deleteFile(path, name) {
+  if (!confirm(`${t('confirm_delete')} ${name}?`)) return;
+  const r = await api('/api/files/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({path})});
+  if (r && r.ok) { toast(`${name} eliminado`); loadFiles(currentFilePath); }
+  else toast(r?.error || 'Error al eliminar', true);
+}
+
+// ── Packages ──────────────────────────────────────────────────────────────────
+async function loadUpgradable() {
+  const data = await api('/api/packages/upgradable') || [];
+  const el = document.getElementById('pkg-upgradable-list');
+  if (!data.length) { el.innerHTML = '<div style="color:var(--green);font-family:\'Share Tech Mono\',monospace;font-size:12px">✓ Todo actualizado</div>'; return; }
+  el.innerHTML = data.map(p => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-family:\'Share Tech Mono\',monospace;font-size:12px;flex:1">${p.name}</span>
+      <span class="badge badge-yellow" style="font-size:10px">${p.version}</span>
+      <button class="btn btn-sm" onclick="pkgAction('upgrade','${p.name}')">↑ upgrade</button>
+    </div>`).join('');
+}
+async function searchPackages() {
+  const q = document.getElementById('pkg-search-input').value.trim();
+  if (q.length < 2) return;
+  const data = await api(`/api/packages/search?q=${encodeURIComponent(q)}`) || [];
+  const el = document.getElementById('pkg-search-results');
+  el.innerHTML = data.map(p => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1"><div style="font-weight:500">${p.name}</div><div style="font-size:11px;color:var(--text2)">${p.description}</div></div>
+      <button class="btn btn-sm btn-primary" onclick="pkgAction('install','${p.name}')">+ install</button>
+      <button class="btn btn-sm btn-danger" onclick="pkgAction('remove','${p.name}')">✕ remove</button>
+    </div>`).join('');
+}
+async function pkgAction(action, pkg) {
+  toast(`${action} ${pkg}...`);
+  const r = await api(`/api/packages/${action}/${encodeURIComponent(pkg)}`, {method:'POST'});
+  if (r && r.ok) toast(`${pkg}: ${action} completado`);
+  else toast(`Error: ${r?.output || ''}`, true);
+}
+document.getElementById('pkg-search-input').addEventListener('keydown', e => { if (e.key==='Enter') searchPackages(); });
+
+// ── Network ───────────────────────────────────────────────────────────────────
+async function loadNetwork() {
+  const data = await api('/api/network') || [];
+  const el = document.getElementById('network-grid');
+  el.innerHTML = data.map(iface => `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600">${iface.name}</span>
+        <span class="badge ${iface.up?'badge-green':'badge-red'}">${iface.up?'UP':'DOWN'}</span>
+        ${iface.speed?`<span class="badge badge-gray">${iface.speed} Mbps</span>`:''}
+      </div>
+      <div class="net-card">
+        <div>
+          <div class="net-field"><div class="net-label">IPv4</div><div class="net-value">${iface.ipv4||'—'}</div></div>
+          <div class="net-field"><div class="net-label">MAC</div><div class="net-value">${iface.mac||'—'}</div></div>
+          <div class="net-field"><div class="net-label">MTU</div><div class="net-value">${iface.mtu}</div></div>
+        </div>
+        <div>
+          <div class="net-field"><div class="net-label">TX</div><div class="net-value">${fmtBytes(iface.bytes_sent)}</div></div>
+          <div class="net-field"><div class="net-label">RX</div><div class="net-value">${fmtBytes(iface.bytes_recv)}</div></div>
+          <div class="net-field"><div class="net-label">IPv6</div><div class="net-value" style="font-size:10px">${iface.ipv6||'—'}</div></div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+applyTheme();
+applyLang();
+loadDashboard();
+</script>
+</body>
+</html>

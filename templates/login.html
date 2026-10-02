@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACDC Console — Acceso</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Barlow:wght@300;400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0d0d;
+    --surface: #141414;
+    --border: rgba(255,255,255,0.08);
+    --accent: #e05c2a;
+    --accent2: #f0a030;
+    --text: #e8e6e0;
+    --muted: #666;
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Rajdhani', sans-serif;
+    --body: 'Barlow', sans-serif;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--body); }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; position: relative; overflow: hidden; }
+
+  /* Scanlines */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+  }
+
+  /* Grid bg */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(224,92,42,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(224,92,42,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+
+  .login-wrap { position: relative; z-index: 1; width: 380px; }
+
+  .logo-block { text-align: center; margin-bottom: 40px; }
+  .logo-img { width: 72px; height: 72px; object-fit: contain; margin-bottom: 16px; filter: drop-shadow(0 0 20px rgba(224,92,42,0.4)); }
+  .logo-img-placeholder {
+    width: 72px; height: 72px; margin: 0 auto 16px;
+    background: rgba(224,92,42,0.1); border: 1px solid rgba(224,92,42,0.3);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+
+  .brand-name { font-family: var(--display); font-size: 42px; font-weight: 700; letter-spacing: 4px; line-height: 1; }
+  .brand-name .ac, .brand-name .dc { color: var(--text); }
+  .brand-name .bolt { color: var(--accent); font-size: 44px; text-shadow: 0 0 20px rgba(224,92,42,0.6); }
+  .brand-full { font-family: var(--body); font-size: 10px; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-top: 6px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 1px solid rgba(224,92,42,0.3);
+    padding: 36px 32px;
+    position: relative;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.6;
+  }
+
+  .section-label { font-family: var(--mono); font-size: 10px; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 24px; }
+
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .field input {
+    width: 100%; background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border); border-radius: 2px;
+    color: var(--text); font-family: var(--mono); font-size: 14px;
+    padding: 10px 14px; outline: none; transition: border-color 0.2s;
+  }
+  .field input:focus { border-color: rgba(224,92,42,0.5); }
+
+  .btn-login {
+    width: 100%; margin-top: 8px;
+    background: var(--accent); border: none; border-radius: 2px;
+    color: #fff; font-family: var(--display); font-size: 16px; font-weight: 700;
+    letter-spacing: 4px; text-transform: uppercase; padding: 14px;
+    cursor: pointer; transition: background 0.2s, box-shadow 0.2s;
+  }
+  .btn-login:hover { background: #f06030; box-shadow: 0 0 24px rgba(224,92,42,0.4); }
+
+  .error-msg {
+    margin-top: 14px; padding: 10px 14px;
+    background: rgba(200,50,50,0.1); border: 1px solid rgba(200,50,50,0.3);
+    color: #e06060; font-family: var(--mono); font-size: 12px;
+    display: none;
+  }
+  .error-msg.visible { display: block; }
+
+  .footer-link { text-align: center; margin-top: 24px; font-family: var(--mono); font-size: 10px; }
+  .footer-link a { color: var(--accent2); text-decoration: none; letter-spacing: 1px; }
+  .footer-link a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="logo-block">
+    <div class="logo-img-placeholder" id="logo-placeholder">👻</div>
+    <img src="/static/logo.png" class="logo-img" id="logo-img" style="display:none;" onerror="this.style.display='none'; document.getElementById('logo-placeholder').style.display='flex';" onload="this.style.display='block'; document.getElementById('logo-placeholder').style.display='none';">
+    <div class="brand-name"><span class="ac">AC</span><span class="bolt">⚡</span><span class="dc">DC</span></div>
+    <div class="brand-full">Advanced Control &amp; Deployment Console</div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">// Acceso al sistema</div>
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="username" placeholder="admin" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn-login" onclick="doLogin()">Iniciar sesión</button>
+    <div class="error-msg" id="err-msg">Credenciales incorrectas</div>
+  </div>
+
+  <div class="footer-link">
+    <a href="{{ config.site_url }}" target="_blank">unfantasmaenelsistema.com</a>
+  </div>
+</div>
+
+<script>
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  async function doLogin() {
+    const u = document.getElementById('username').value;
+    const p = document.getElementById('password').value;
+    const err = document.getElementById('err-msg');
+    err.classList.remove('visible');
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({username: u, password: p})
+    });
+    if (r.ok) {
+      window.location.href = '/';
+    } else {
+      err.classList.add('visible');
+      document.getElementById('password').value = '';
+    }
+  }
+</script>
+</body>
+</html>
