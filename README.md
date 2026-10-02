@@ -14,14 +14,19 @@ cp icono.png static/logo.png
 # 3. Instala con un comando (requiere sudo)
 chmod +x install.sh
 sudo ./install.sh install
+#    El instalador te pedirá que fijes la contraseña de admin ANTES de
+#    arrancar el servicio: no hay ventana en la que quede expuesto con
+#    la contraseña de fábrica.
 
 # 4. Abre el navegador en:
-#    http://TU-IP:8080
-#    Usuario: admin  /  Contraseña: admin
-
-# 5. ¡Cambia la contraseña!
-./install.sh passwd
+#    http://127.0.0.1:8080  (por defecto solo accesible desde este equipo)
+#    Usuario: admin  /  Contraseña: la que acabas de fijar
 ```
+
+> Por defecto el panel solo escucha en `127.0.0.1` (este mismo equipo). Da
+> control de root completo del servidor, así que exponerlo en la red
+> (`"host": "0.0.0.0"` en `config.json`) debe ser una decisión explícita
+> tuya — ver [Seguridad](#seguridad).
 
 ---
 
@@ -65,7 +70,7 @@ Edita `config.json`:
   "username": "admin",
   "password_hash": "...",     // SHA-256 de la contraseña
   "port": 8080,               // Puerto de escucha
-  "host": "0.0.0.0",          // 127.0.0.1 para solo local
+  "host": "127.0.0.1",        // 0.0.0.0 para acceso desde otros equipos
   "session_timeout_minutes": 60,
   "site_url": "https://www.unfantasmaenelsistema.com"
 }
@@ -88,10 +93,21 @@ Tras cambiar config.json: `sudo ./install.sh restart`
 
 ## Seguridad
 
-- Cambia la contraseña por defecto inmediatamente
-- Configura `"host": "127.0.0.1"` si solo necesitas acceso local
-- Considera poner nginx como proxy inverso con HTTPS para acceso remoto
-- La sesión expira tras 60 minutos de inactividad (configurable)
+Este panel da control de root completo del servidor (procesos, systemd,
+firewall, cron, usuarios, ficheros, paquetes). Trátalo como tratarías una
+clave root, no como una app más.
+
+- `sudo ./install.sh install` **obliga** a fijar una contraseña antes de
+  arrancar el servicio; no hay ventana expuesta con la contraseña de fábrica.
+- El host por defecto es `127.0.0.1` (solo este equipo). Cambia
+  `"host": "0.0.0.0"` en `config.json` únicamente si necesitas acceso desde
+  otros equipos, y hazlo con conocimiento de causa.
+- Considera poner nginx como proxy inverso con HTTPS para acceso remoto, en
+  vez de exponer `0.0.0.0:8080` directamente.
+- La sesión expira tras 60 minutos de inactividad real (configurable vía
+  `session_timeout_minutes`) — cada petición autenticada renueva el
+  temporizador.
+- `/api/login` bloquea una IP durante 5 minutos tras 5 intentos fallidos.
 
 ---
 
