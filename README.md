@@ -4,6 +4,15 @@
 
 ---
 
+## Capturas
+
+| | |
+|---|---|
+| ![Dashboard](docs/screenshots/01-dashboard.jpg) | ![Procesos](docs/screenshots/02-procesos.jpg) |
+| ![Usuarios](docs/screenshots/03-usuarios.jpg) | ![Paquetes](docs/screenshots/04-paquetes.jpg) |
+
+---
+
 ## Instalación rápida
 
 ```bash
@@ -108,6 +117,22 @@ clave root, no como una app más.
   `session_timeout_minutes`) — cada petición autenticada renueva el
   temporizador.
 - `/api/login` bloquea una IP durante 5 minutos tras 5 intentos fallidos.
+
+---
+
+## Changelog
+
+**2026-10-05 — Verificación real de los fixes de seguridad**
+
+Se montó el panel desde cero en un contenedor Debian 12 desechable (con systemd real para la instalación vía `install.sh`) y se reprodujeron en vivo, sobre el código previo a estos fixes, los tres hallazgos más graves antes de confirmarlos ya corregidos:
+
+- 🐛 **La app no arrancaba en absoluto**: `/api/processes` estaba definido dos veces (copia/pega), y Flask se negaba a arrancar con `AssertionError: View function mapping is overwriting an existing endpoint function: api_processes`. Reproducido con el `install.sh install` real (vía systemd) y arrancando `app.py` directamente. Corregido eliminando el duplicado.
+- 🔓 **RCE real en `./install.sh passwd`**: la contraseña se interpolaba sin escapar dentro de un script `python3 -c "..."`; una contraseña con una comilla simple permitía ejecutar código Python arbitrario. Confirmado con un payload que crea un fichero de prueba. Corregido pasando la contraseña como variable de entorno en vez de interpolarla en el código fuente.
+- 🔓 **Sobrescritura de la contraseña de cualquier usuario (incluido root)**: `/api/users/create` y `/api/users/<u>/passwd` pasaban la contraseña sin validar a `chpasswd` vía stdin (`usuario:contraseña`); una contraseña con un salto de línea inyectaba una segunda línea y cambiaba la contraseña de *otro* usuario del sistema. Confirmado creando un usuario víctima y comprobando que su hash en `/etc/shadow` cambiaba al "crear" un usuario distinto con el payload en el campo contraseña. Corregido rechazando contraseñas con `\n`/`\r`.
+
+También se verificó en vivo (no solo lectura de código) que tras el fix: el login bloquea tras 5 intentos fallidos (429, incluida la contraseña correcta mientras dura el bloqueo), y que el panel completo (Dashboard, Procesos, Usuarios, Archivos, Paquetes, Cron, Firewall) funciona de extremo a extremo con datos reales del sistema una vez corregido el bug de arranque.
+
+**No se pudo verificar en esta pasada** (limitación del entorno de pruebas, no del código): los módulos que dependen de `systemctl`/`ufw` reales no se ejercitaron más allá de confirmar que responden sin error, al evitar un segundo contenedor con systemd tras encontrarse inestable la primera vez en este host.
 
 ---
 
