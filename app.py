@@ -10,6 +10,7 @@ import json
 import time
 import shutil
 import hashlib
+import secrets
 import subprocess
 import threading
 from pathlib import Path
@@ -28,7 +29,12 @@ def load_config():
         "username": "admin",
         "password_hash": hashlib.sha256("admin".encode()).hexdigest(),
         "port": 8080,
-        "host": "0.0.0.0",
+        # 127.0.0.1 por defecto: este panel da control de root completo del
+        # servidor (procesos, systemd, firewall, cron, usuarios, ficheros,
+        # paquetes). Exponerlo en todas las interfaces debe ser una
+        # decision explicita del operador (editar "host" en config.json),
+        # no el valor de fabrica.
+        "host": "127.0.0.1",
         "session_timeout_minutes": 60,
         "site_url": "https://www.unfantasmaenelsistema.com"
     }
@@ -56,20 +62,63 @@ def no_cache(response):
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if "user" not in session:
+        if "user" not in session or not check_session_timeout():
+            session.clear()
             if request.path.startswith("/api/"):
                 return jsonify({"error": "unauthorized"}), 401
             return redirect(url_for("login_page"))
+        # Ventana deslizante: cada peticion autenticada renueva el
+        # temporizador, asi que "session_timeout_minutes" es inactividad
+        # real, no un limite fijo desde el login.
+        session["login_time"] = datetime.now().isoformat()
         return f(*args, **kwargs)
     return decorated
 
 def check_session_timeout():
+    # Antes definida pero nunca invocada: la sesion no caducaba nunca pese
+    # a lo que decia el README. Ahora login_required la llama en cada
+    # peticion.
     if "login_time" in session:
         elapsed = datetime.now() - datetime.fromisoformat(session["login_time"])
         if elapsed > timedelta(minutes=CONFIG["session_timeout_minutes"]):
-            session.clear()
             return False
     return True
+
+
+# ─── Rate limiting basico para /api/login ──────────────────────────────────────
+# Las credenciales por defecto (o una contraseña debil elegida a mano) son el
+# vector de ataque mas realista contra este panel: sin esto, se podian probar
+# contraseñas sin limite alguno.
+_LOGIN_MAX_ATTEMPTS = 5
+_LOGIN_LOCKOUT_SECONDS = 300
+_login_attempts: dict[str, list[float]] = {}
+_login_lock = threading.Lock()
+
+
+def _client_ip() -> str:
+    return request.remote_addr or "unknown"
+
+
+def _login_rate_limited(ip: str) -> int:
+    """Devuelve segundos restantes de bloqueo, o 0 si se puede intentar."""
+    now = time.time()
+    with _login_lock:
+        attempts = [t for t in _login_attempts.get(ip, []) if now - t < _LOGIN_LOCKOUT_SECONDS]
+        _login_attempts[ip] = attempts
+        if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
+            oldest = min(attempts)
+            return max(0, int(_LOGIN_LOCKOUT_SECONDS - (now - oldest)))
+    return 0
+
+
+def _register_failed_login(ip: str) -> None:
+    with _login_lock:
+        _login_attempts.setdefault(ip, []).append(time.time())
+
+
+def _clear_failed_logins(ip: str) -> None:
+    with _login_lock:
+        _login_attempts.pop(ip, None)
 
 # ─── Routes: Pages ─────────────────────────────────────────────────────────────
 
@@ -89,14 +138,21 @@ def login_page():
 
 @app.route("/api/login", methods=["POST"])
 def api_login():
-    data = request.get_json()
+    ip = _client_ip()
+    wait = _login_rate_limited(ip)
+    if wait > 0:
+        return jsonify({"ok": False, "error": f"Demasiados intentos. Espera {wait} segundos."}), 429
+
+    data = request.get_json() or {}
     username = data.get("username", "")
     password = data.get("password", "")
     ph = hashlib.sha256(password.encode()).hexdigest()
-    if username == CONFIG["username"] and ph == CONFIG["password_hash"]:
+    if secrets.compare_digest(username, CONFIG["username"]) and secrets.compare_digest(ph, CONFIG["password_hash"]):
+        _clear_failed_logins(ip)
         session["user"] = username
         session["login_time"] = datetime.now().isoformat()
         return jsonify({"ok": True})
+    _register_failed_login(ip)
     return jsonify({"ok": False, "error": "Credenciales incorrectas"}), 401
 
 @app.route("/api/logout", methods=["POST"])
@@ -143,26 +199,6 @@ def api_dashboard():
     })
 
 # ─── API: Processes ────────────────────────────────────────────────────────────
-
-@app.route("/api/processes")
-@login_required
-def api_processes():
-    procs = []
-    for p in psutil.process_iter(["pid", "name", "username", "cpu_percent", "memory_percent", "status", "cmdline"]):
-        try:
-            info = p.info
-            procs.append({
-                "pid": info["pid"],
-                "name": info["name"],
-                "user": info["username"] or "",
-                "cpu": round(info["cpu_percent"] or 0, 1),
-                "mem": round(info["memory_percent"] or 0, 1),
-                "status": info["status"]
-            })
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
-    procs.sort(key=lambda x: x["cpu"], reverse=True)
-    return jsonify(procs[:100])
 
 @app.route("/api/processes")
 @login_required
@@ -542,6 +578,11 @@ def api_user_create():
         return jsonify({"ok": False, "error": "Nombre de usuario inválido"}), 400
     if not password or len(password) < 4:
         return jsonify({"ok": False, "error": "Contraseña demasiada corta (mín. 4 caracteres)"}), 400
+    if "\n" in password or "\r" in password:
+        # chpasswd lee "usuario:contraseña" por linea desde stdin: una
+        # contraseña con salto de linea permite inyectar una entrada extra
+        # y fijar la contraseña de OTRO usuario (incluido root).
+        return jsonify({"ok": False, "error": "La contraseña no puede contener saltos de línea"}), 400
 
     flags = "-m" if create_home else "-M"
     shell = shell if shell in ("/bin/bash", "/bin/sh", "/bin/zsh", "/usr/bin/zsh", "/sbin/nologin", "/usr/sbin/nologin") else "/bin/bash"
@@ -565,6 +606,8 @@ def api_user_passwd(username):
     password = data.get("password", "")
     if not password or len(password) < 4:
         return jsonify({"ok": False, "error": "Contraseña demasiado corta (mín. 4 caracteres)"}), 400
+    if "\n" in password or "\r" in password:
+        return jsonify({"ok": False, "error": "La contraseña no puede contener saltos de línea"}), 400
     proc = subprocess.run("chpasswd", input=f"{username}:{password}", shell=True, text=True, capture_output=True)
     if proc.returncode != 0:
         return jsonify({"ok": False, "error": proc.stderr}), 500
