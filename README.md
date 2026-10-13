@@ -1,7 +1,7 @@
 <div align="center">
   <img src="static/logo.png" alt="Un Fantasma en el Sistema" width="120" />
 
-  # ⚡ AC⚡DC Console
+  # AC⚡DC Console
   ### Advanced Control & Deployment Console
 
   <p align="center">
