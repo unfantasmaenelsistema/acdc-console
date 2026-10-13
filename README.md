@@ -36,11 +36,11 @@
 4. [Requisitos](#-requisitos)
 5. [Instalación Rápida](#-instalación-rápida)
 6. [Gestión del Servicio](#-gestión-del-servicio)
-7. [Configuración](#-configuración)
+7. [Configuración](#️-configuración)
 8. [Seguridad](#-seguridad)
 9. [Acceso Remoto Seguro](#-acceso-remoto-seguro)
 10. [Estructura del Proyecto](#-estructura-del-proyecto)
-11. [Tecnologías Utilizadas](#-tecnologías-utilizadas)
+11. [Tecnologías Utilizadas](#️-tecnologías-utilizadas)
 12. [Changelog](#-changelog)
 13. [Créditos y Licencia](#-créditos-y-licencia)
 
